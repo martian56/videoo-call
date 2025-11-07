@@ -90,10 +90,8 @@ export const useWebSocket = (
 
   useEffect(() => {
     connect();
-    let isMounted = true;
 
     return () => {
-      isMounted = false;
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = undefined;
