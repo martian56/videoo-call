@@ -8,8 +8,8 @@ jobs:
   frontend-check:
     runs-on: ubuntu-latest
     env:
-      VITE_API_URL=https://videoo-call.onrender.com
-      VITE_WS_URL=wss://videoo-call.onrender.com
+      VITE_API_URL: https://videoo-call.onrender.com
+      VITE_WS_URL: wss://videoo-call.onrender.com
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
