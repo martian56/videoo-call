@@ -73,9 +73,11 @@ export const useWebSocket = (
         console.log('WebSocket closed');
         setIsConnected(false);
         
-        // Attempt to reconnect after 3 seconds
+        // Only reconnect if this wasn't an intentional close
+        // Check if component is still mounted before reconnecting
         reconnectTimeoutRef.current = setTimeout(() => {
-          if (wsRef.current?.readyState === WebSocket.CLOSED) {
+          // Only reconnect if WebSocket is still closed and we don't have a new connection
+          if (wsRef.current?.readyState === WebSocket.CLOSED || !wsRef.current) {
             connect();
           }
         }, 3000);
@@ -88,13 +90,17 @@ export const useWebSocket = (
 
   useEffect(() => {
     connect();
+    let isMounted = true;
 
     return () => {
+      isMounted = false;
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = undefined;
       }
       if (wsRef.current) {
         wsRef.current.close();
+        wsRef.current = null;
       }
     };
   }, [connect]);
