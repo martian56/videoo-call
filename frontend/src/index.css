@@ -1,0 +1,163 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    background-color: theme(colors.gray.950);
+    color: theme(colors.white);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Gradient text support */
+  .gradient-text {
+    background: linear-gradient(to right, rgb(96, 165, 250), rgb(168, 85, 247), rgb(37, 99, 235));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+}
+
+/* Custom animations */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Video grid */
+.video-grid {
+  display: grid;
+  gap: 0.5rem;
+  width: 100%;
+  height: 100%;
+  padding: 0.5rem;
+  box-sizing: border-box;
+}
+
+.video-grid-1 {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+
+.video-grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: 1fr;
+}
+
+/* 3 participants: 2 columns, 2 rows (one empty) */
+.video-grid-3 {
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+}
+
+/* 4 participants: 2x2 grid */
+.video-grid-4 {
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+}
+
+/* 5-6 participants: 3 columns, 2 rows */
+.video-grid-5,
+.video-grid-6 {
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+}
+
+/* 7-9 participants: 3 columns, 3 rows */
+.video-grid-7,
+.video-grid-8,
+.video-grid-9 {
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+}
+
+/* 10 participants: 4 columns, 3 rows (2 empty) */
+.video-grid-10 {
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+}
+
+/* Better video scaling - ensure videos maintain aspect ratio */
+.video-grid > div {
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+}
+
+.video-grid > div video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Responsive breakpoints for better scaling */
+@media (min-width: 1920px) {
+  /* Large screens: more columns for better use of space */
+  .video-grid-7,
+  .video-grid-8,
+  .video-grid-9 {
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+  }
+  
+  .video-grid-10 {
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 1024px) and (min-width: 769px) {
+  /* Medium screens: optimize for tablets */
+  .video-grid-5,
+  .video-grid-6 {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+  }
+  
+  .video-grid-7,
+  .video-grid-8,
+  .video-grid-9 {
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+  }
+  
+  .video-grid-10 {
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .video-grid {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto !important;
+    gap: 0.25rem;
+    padding: 0.25rem;
+  }
+  
+  .video-grid > div {
+    aspect-ratio: 16 / 9;
+    min-height: 200px;
+  }
+}
