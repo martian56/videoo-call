@@ -19,7 +19,11 @@ class Settings(BaseSettings):
     secret_key: str = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
     
     # CORS
-    cors_origins: list[str] = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
+    cors_origins: list[str] = [
+        origin.strip() 
+        for origin in os.getenv("CORS_ORIGINS", "http://localhost:5173,https://linkup.ufazien.com").split(",")
+        if origin.strip()
+    ]
     
     # Application
     app_name: str = "VideoCall"

@@ -68,7 +68,7 @@ export default function VideoGrid({
       </div>
 
       {/* Remote Videos */}
-      {Array.from(remoteStreams.entries()).map(([clientId, stream]) => {
+      {Array.from(remoteStreams.entries()).map(([clientId]) => {
         const participant = getParticipantInfo(clientId);
         return (
           <div key={clientId} className="relative bg-gray-900 rounded-lg overflow-hidden group min-h-0 flex items-center justify-center">
