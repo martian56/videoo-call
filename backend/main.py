@@ -45,6 +45,7 @@ async def startup():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     logger.info("Database tables created")
+    logger.info(f"CORS allowed origins: {settings.cors_origins}")
 
 
 @app.get("/")

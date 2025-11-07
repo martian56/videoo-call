@@ -4,7 +4,8 @@ import { Copy, Check, Users } from 'lucide-react';
 import VideoGrid from '../components/VideoGrid';
 import ChatPanel from '../components/ChatPanel';
 import MeetingControls from '../components/MeetingControls';
-import { useWebSocket, WSMessage } from '../hooks/useWebSocket';
+import { useWebSocket } from '../hooks/useWebSocket';
+import type { WSMessage } from '../hooks/useWebSocket';
 import { useWebRTC } from '../hooks/useWebRTC';
 import { generateClientId } from '../utils/generateId';
 import { WSMessageType } from '../api/meetings';
@@ -30,7 +31,7 @@ export default function MeetingRoom() {
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const [copied, setCopied] = useState(false);
   const [participants, setParticipants] = useState<Map<string, { displayName?: string; audioEnabled?: boolean; videoEnabled?: boolean }>>(new Map());
-  const [otherParticipants, setOtherParticipants] = useState<string[]>([]);
+  const [, setOtherParticipants] = useState<string[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
   const sendMessageRef = useRef<((message: any) => void) | null>(null);
 
@@ -45,7 +46,6 @@ export default function MeetingRoom() {
     removePeer,
     toggleAudio,
     toggleVideo,
-    stopLocalStream,
     cleanup,
     hasPeerConnection,
   } = useWebRTC({
@@ -83,7 +83,7 @@ export default function MeetingRoom() {
     switch (message.type) {
       case WSMessageType.USER_JOINED:
         if (message.clientId && message.clientId !== clientId) {
-          setOtherParticipants((prev) => [...prev, message.clientId]);
+          setOtherParticipants((prev) => [...prev, message.clientId!]);
           // Create offer to new participant
           createOffer(message.clientId).then((offer) => {
             if (offer && sendMessageRef.current) {
@@ -170,7 +170,7 @@ export default function MeetingRoom() {
             {
               from: message.from || 'unknown',
               displayName: message.displayName,
-              message: message.message,
+              message: message.message!,
               timestamp: message.timestamp || new Date().toISOString(),
             },
           ]);

@@ -21,7 +21,7 @@ export default function ChatPanel({
   onClose,
   messages,
   onSendMessage,
-  displayName,
+  displayName: _displayName,
 }: ChatPanelProps) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
