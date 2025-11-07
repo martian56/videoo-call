@@ -229,7 +229,7 @@ export default function MeetingRoom() {
         console.warn('Unhandled WebSocket message type:', message.type, message);
         break;
     }
-  }, [clientId, createOffer, handleOffer, handleAnswer, handleRemoteIceCandidate, removePeer, hasPeerConnection, isInitialized]);
+  }, [clientId, createOffer, handleOffer, handleAnswer, handleRemoteIceCandidate, removePeer, hasPeerConnection, isInitialized, localStream, chatOpen]);
 
   // Normalize meeting code to lowercase for backend consistency
   const normalizedMeetingCode = meetingCode?.toLowerCase() || '';

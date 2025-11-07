@@ -60,6 +60,7 @@ async def root():
 
 
 @app.get("/health")
+@app.head("/health")
 async def health():
     return {"status": "healthy", "timestamp": datetime.now(UTC).isoformat()}
 
@@ -173,6 +174,7 @@ async def websocket_endpoint(
     user_agent = websocket.headers.get("user-agent", "Unknown")
     
     # Get or create meeting in database
+    meeting = None
     async with AsyncSessionLocal() as db:
         try:
             # Find meeting by code
@@ -185,6 +187,16 @@ async def websocket_endpoint(
                 await websocket.close(code=1008, reason="Meeting not found")
                 return
             
+            # Check if this is the first active participant (make them host)
+            # Use a transaction-safe approach to avoid race conditions
+            existing_participants = await db.execute(
+                select(func.count(Participant.id))
+                .where(Participant.meeting_id == meeting.id)
+                .where(Participant.is_active == True)
+            )
+            count = existing_participants.scalar() or 0
+            is_host = count == 0
+            
             # Create participant record
             participant = Participant(
                 meeting_id=meeting.id,
@@ -193,18 +205,8 @@ async def websocket_endpoint(
                 ip_address=client_ip,
                 user_agent=user_agent,
                 is_active=True,
-                is_host=False,  # First participant becomes host
+                is_host=is_host,
             )
-            
-            # Check if this is the first participant (make them host)
-            existing_participants = await db.execute(
-                select(func.count(Participant.id))
-                .where(Participant.meeting_id == meeting.id)
-                .where(Participant.is_active == True)
-            )
-            count = existing_participants.scalar() or 0
-            if count == 0:
-                participant.is_host = True
             
             db.add(participant)
             
@@ -221,10 +223,16 @@ async def websocket_endpoint(
             await db.commit()
             await db.refresh(participant)
             
-            logger.info(f"Participant {client_id} created in database for meeting {meeting_code}")
+            logger.info(f"Participant {client_id} created in database for meeting {meeting_code} (host: {is_host})")
         except Exception as e:
             logger.error(f"Error creating participant: {e}")
             await db.rollback()
+            await websocket.close(code=1011, reason="Internal server error")
+            return
+    
+    # Ensure meeting was found before proceeding
+    if not meeting:
+        return
     
     # Initialize meeting connections if not exists
     if meeting_code not in active_connections:
@@ -459,7 +467,10 @@ async def broadcast_to_meeting(meeting_code: str, message: dict, exclude_client:
     if meeting_code not in active_connections:
         return
     
-    for client_id, ws in active_connections[meeting_code].items():
+    # Create a list of connections to avoid modification during iteration
+    connections = list(active_connections[meeting_code].items())
+    
+    for client_id, ws in connections:
         if exclude_client and client_id == exclude_client:
             continue
         
@@ -467,6 +478,9 @@ async def broadcast_to_meeting(meeting_code: str, message: dict, exclude_client:
             await ws.send_json(message)
         except Exception as e:
             logger.error(f"Error broadcasting to {client_id}: {e}")
+            # Remove dead connection
+            if meeting_code in active_connections:
+                active_connections[meeting_code].pop(client_id, None)
 
 
 async def handle_disconnect(meeting_code: str, client_id: str, client_ip: str = None):
