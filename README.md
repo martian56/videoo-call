@@ -1,29 +1,62 @@
-# VideoCall - Modern Group Video Calling Platform
+# LinkUp - Modern Video Meetings Made Simple
 
-A modern, Google Meet-like video calling application with group video calls (up to 10 people) and live chat functionality.
+LinkUp is a beautiful, modern video calling platform that makes connecting with your team effortless. Whether you're hosting a quick standup or a team meeting, LinkUp provides a smooth, intuitive experience for up to 10 participants.
 
-## 🚀 Features
+## ✨ What Makes LinkUp Special
 
-- **Group Video Calls** - Connect with up to 10 participants simultaneously
-- **Live Chat** - Real-time messaging during meetings
-- **Modern UI/UX** - Beautiful, responsive design for desktop and mobile
-- **WebRTC** - Peer-to-peer video using Google STUN servers
-- **Meeting Management** - Create meetings with shareable links
-- **Database Logging** - Track meetings, participants, and events
-- **IP Tracking** - Log participant IPs and user agents
+- **Crystal Clear Video Calls** - Connect with up to 10 people in high-quality video meetings
+- **Live Chat** - Send messages in real-time during your meetings
+- **Screen Sharing** - Share your screen with everyone in the meeting
+- **Beautiful Design** - Clean, modern interface that works beautifully on desktop and mobile
+- **Keyboard Shortcuts** - Power users will love the quick keyboard controls
+- **No Sign-Up Required** - Just create a meeting and share the link - it's that simple!
+- **Participant Management** - See who's in the meeting, pin important speakers, and manage your call easily
 
 ## 📁 Project Structure
 
+Backend code is organized as follows:
+
 ```
-video_call/
-├── backend/          # FastAPI backend
-│   ├── main.py      # Main application
-│   ├── models.py    # Database models
-│   ├── schemas.py   # Pydantic schemas
-│   ├── database.py  # Database setup
-│   └── config.py    # Configuration
+backend/
+├── src/                          # Source code
+│   ├── __init__.py
+│   ├── main.py                   # Application entry point
+│   │
+│   ├── api/                      # API routes and endpoints
+│   │   ├── __init__.py
+│   │   ├── meetings.py           # Meeting CRUD endpoints
+│   │   └── websocket.py          # WebSocket handlers
+│   │
+│   ├── core/                     # Core functionality
+│   │   ├── __init__.py
+│   │   ├── config.py             # Configuration and settings
+│   │   └── schemas.py            # Pydantic schemas
+│   │
+│   └── db/                       # Database layer
+│       ├── __init__.py
+│       ├── database.py           # Database connection
+│       └── models.py             # SQLAlchemy models
 │
-└── frontend/        # React + TypeScript frontend
+├── tests/                        # Test suite
+│   ├── __init__.py
+│   ├── conftest.py               # Pytest fixtures
+│   ├── test_api.py               # API tests
+│   └── test_meetings.py          # Meeting tests
+│
+├── alembic/                      # Database migrations
+│   ├── env.py                    # Alembic environment (updated)
+│   └── versions/                 # Migration scripts
+│
+├── .env                          # Environment variables
+├── alembic.ini                   # Alembic configuration
+├── requirements.txt              # Python dependencies
+└── README.md                     # This file
+```
+
+Frontend code is organized as follows:
+
+```
+frontend/  # React + TypeScript frontend
     ├── src/
     │   ├── pages/   # Page components
     │   ├── components/ # UI components
@@ -31,35 +64,39 @@ video_call/
     │   └── api/    # API client
 ```
 
-## 🛠️ Setup
+## 🛠️ Setting Up LinkUp
+
+Ready to run LinkUp on your machine? Let's get you set up!
 
 ### Backend Setup
 
-1. **Navigate to backend:**
+The backend handles all the meeting logic and WebRTC signaling.
+
+1. **Go to the backend folder:**
    ```bash
    cd backend
    ```
 
-2. **Create virtual environment:**
+2. **Create a Python virtual environment**:
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
-3. **Install dependencies:**
+3. **Install all the required packages:**
    ```bash
    pip install -r requirements.txt
    ```
 
-4. **Configure environment:**
-   Create a `.env` file:
+4. **Set up your environment variables:**
+   Create a `.env` file in the `backend` folder:
    ```env
    DATABASE_URL=postgresql://user:password@localhost:5432/videocall
    SECRET_KEY=your-secret-key-here
    CORS_ORIGINS=http://localhost:5173
    ```
 
-5. **Run database migrations:**
+5. **Set up the database:**
    ```bash
    alembic init alembic
    # Edit alembic.ini with your DATABASE_URL
@@ -67,57 +104,79 @@ video_call/
    alembic upgrade head
    ```
 
-6. **Start the server:**
+6. **Start the backend server:**
    ```bash
    python main.py
    ```
+   
+   You should see the server running on `http://localhost:8000` 🎉
 
 ### Frontend Setup
 
-1. **Navigate to frontend:**
+1. **Go to the frontend folder:**
    ```bash
    cd frontend
    ```
 
-2. **Install dependencies:**
+2. **Install all the dependencies:**
    ```bash
    npm install
    ```
 
-3. **Configure environment:**
-   Create a `.env` file:
+3. **Configure the API connection:**
+   Create a `.env` file in the `frontend` folder:
    ```env
    VITE_API_URL=http://localhost:8000
    VITE_WS_URL=ws://localhost:8000
    ```
 
-4. **Start development server:**
+4. **Start the development server:**
    ```bash
    npm run dev
    ```
+   
+   The app will open in your browser at `http://localhost:5173` 🚀
 
-## 🎯 Usage
+## 🎯 Getting Started
 
-1. **Create a Meeting:**
-   - Go to the home page
-   - Click "Create Meeting"
-   - Share the meeting code or link with participants
+### Creating Your First Meeting
 
-2. **Join a Meeting:**
-   - Enter the meeting code
-   - Enter your name
-   - Click "Join Meeting"
+1. Head to the home page and click **"Create Meeting"**
+2. You'll get a unique meeting code - share it with your team!
+3. You can also copy the meeting link to send via email or chat
 
-3. **During the Meeting:**
-   - Use controls to mute/unmute audio/video
-   - Open chat panel to send messages
-   - Copy meeting link to invite others
+### Joining a Meeting
 
-## 🗄️ Database Models
+1. Enter the 10-character meeting code (or use a shared link)
+2. Type in your name so others know who you are
+3. Click **"Join Meeting"** and you're in!
 
-- **Meeting** - Stores meeting information
-- **Participant** - Tracks meeting participants
-- **MeetingLog** - Logs all meeting events
+### During the Meeting
+
+- **Mute/Unmute** - Click the microphone button or press `M`
+- **Turn Video On/Off** - Click the camera button or press `V`
+- **Share Your Screen** - Click the screen share button or press `S`
+- **Chat** - Click the chat icon or press `C` to open the chat panel
+- **See Participants** - Click the participants icon or press `P` to see who's in the call
+- **Pin Someone** - Click the pin icon on any video to focus on them
+- **Leave** - Click the red phone button or press `Esc` to leave the meeting
+
+### Keyboard Shortcuts
+
+- `M` - Toggle microphone
+- `V` - Toggle camera
+- `C` - Toggle chat
+- `P` - Toggle participants list
+- `S` - Toggle screen sharing
+- `Esc` - Close panels or leave meeting
+- `?` - Show all keyboard shortcuts
+
+## 🗄️ How It Works
+
+LinkUp uses a simple database to keep track of your meetings:
+- **Meetings** - Each meeting gets a unique code and stores basic information
+- **Participants** - Tracks who's in each meeting and their preferences
+- **Event Logging** - Keeps a record of meeting activities for troubleshooting
 
 ## 🔧 Technologies
 
@@ -126,36 +185,12 @@ video_call/
 - SQLAlchemy (async)
 - Alembic
 - WebSocket
-- PostgreSQL (via Neon.tech)
+- PostgreSQL
 
 ### Frontend
-- React 18
+- React 19
 - TypeScript
 - Vite
 - Tailwind CSS
 - WebRTC
 - Axios
-
-## 📝 API Endpoints
-
-- `POST /api/meetings` - Create a new meeting
-- `GET /api/meetings/{code}` - Get meeting details
-- `GET /api/meetings/{code}/participants` - Get participants
-- `WS /ws/{meeting_code}/{client_id}` - WebSocket connection
-
-## 🚀 Deployment
-
-### Backend
-- Set up PostgreSQL database (Neon.tech recommended)
-- Configure environment variables
-- Run migrations
-- Deploy with uvicorn (single worker for WebSocket)
-
-### Frontend
-- Build: `npm run build`
-- Deploy `dist/` folder to your hosting service
-- Configure environment variables for API URLs
-
-## 📄 License
-
-MIT License

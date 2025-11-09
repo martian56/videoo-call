@@ -81,4 +81,3 @@ class WSMessageType:
     # System
     ERROR = "error"
     SUCCESS = "success"
-

@@ -2,7 +2,7 @@ from sqlalchemy import Column, String, DateTime, Boolean, Integer, Text, Foreign
 from sqlalchemy.orm import relationship
 from datetime import datetime, UTC
 import uuid
-from database import Base
+from src.db.database import Base
 
 
 def generate_uuid():
@@ -81,4 +81,3 @@ class MeetingLog(Base):
     
     def __repr__(self):
         return f"<MeetingLog {self.event_type} at {self.timestamp}>"
-

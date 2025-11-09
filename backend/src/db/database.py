@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
-from config import settings
+from src.core.config import settings
 
 # Create async engine
 engine = create_async_engine(
@@ -32,4 +32,3 @@ async def get_db():
             raise
         finally:
             await session.close()
-

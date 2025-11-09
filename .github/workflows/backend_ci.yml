@@ -1,0 +1,44 @@
+﻿name: Backend CI
+
+on:
+  push:
+    branches: [ "develop", "main" ]
+    paths:
+      - 'backend/**'
+  pull_request:
+    branches: [ "develop", "main" ]
+    paths:
+      - 'backend/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ./backend
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: 'backend/requirements.txt'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Run tests with pytest
+        run: |
+          pytest tests/ -v --tb=short
+      
+      - name: Test Summary
+        if: always()
+        run: |
+          echo " Backend tests completed"

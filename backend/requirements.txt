@@ -9,3 +9,9 @@ pydantic
 pydantic-settings
 websockets
 
+# Testing
+pytest
+pytest-asyncio
+httpx
+aiosqlite
+
