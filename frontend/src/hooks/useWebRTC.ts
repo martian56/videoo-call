@@ -16,6 +16,9 @@ export const useWebRTC = (options?: UseWebRTCOptions) => {
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
   const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
   const localStreamRef = useRef<MediaStream | null>(null);
+  const screenStreamRef = useRef<MediaStream | null>(null);
+  const originalVideoTrackRef = useRef<MediaStreamTrack | null>(null);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
 
   const initializeLocalStream = useCallback(async (): Promise<boolean> => {
     try {
@@ -40,25 +43,82 @@ export const useWebRTC = (options?: UseWebRTCOptions) => {
     const pc = new RTCPeerConnection(RTC_CONFIG);
     
     // Add local stream tracks
-    if (localStreamRef.current) {
-      console.log('Adding local tracks to peer connection for:', clientId);
-      localStreamRef.current.getTracks().forEach((track) => {
-        pc.addTrack(track, localStreamRef.current!);
+    // If we're screen sharing, use the screen track, otherwise use camera
+    const streamToUse = screenStreamRef.current && isScreenSharing 
+      ? screenStreamRef.current 
+      : localStreamRef.current;
+    
+    if (streamToUse) {
+      console.log('Adding local tracks to peer connection for:', clientId, 'screen sharing:', isScreenSharing);
+      streamToUse.getTracks().forEach((track) => {
+        pc.addTrack(track, streamToUse);
       });
+      
+      // If we're using screen stream, also add audio from original stream
+      if (screenStreamRef.current && isScreenSharing && localStreamRef.current) {
+        const audioTrack = localStreamRef.current.getAudioTracks()[0];
+        if (audioTrack) {
+          pc.addTrack(audioTrack, localStreamRef.current);
+        }
+      }
     } else {
       console.warn('No local stream available when creating peer connection for:', clientId);
     }
 
     // Handle remote stream
     pc.ontrack = (event) => {
-      console.log('Received remote track from:', clientId);
-      if (event.streams && event.streams[0]) {
+      console.log('Received remote track from:', clientId, {
+        trackId: event.track.id,
+        trackKind: event.track.kind,
+        trackLabel: event.track.label,
+        streamsCount: event.streams.length
+      });
+      
+      setRemoteStreams((prev) => {
+        const newMap = new Map(prev);
+        
+        if (event.streams && event.streams[0]) {
+          // Use the stream from the event
+          const stream = event.streams[0];
+          // Create a new stream object to force React update
+          const newStream = new MediaStream(stream.getTracks());
+          newMap.set(clientId, newStream);
+          console.log('Updated remote stream for', clientId, 'tracks:', newStream.getTracks().map(t => ({ id: t.id, kind: t.kind, label: t.label, enabled: t.enabled })));
+        } else if (event.track) {
+          // If no stream, create one from the track
+          const existingStream = prev.get(clientId);
+          if (existingStream) {
+            // Add the new track to existing stream or create new one
+            const newStream = new MediaStream([...existingStream.getTracks(), event.track]);
+            newMap.set(clientId, newStream);
+          } else {
+            const newStream = new MediaStream([event.track]);
+            newMap.set(clientId, newStream);
+          }
+          console.log('Created/updated stream from track for', clientId);
+        }
+        
+        return newMap;
+      });
+      
+      // Listen for track ending to update stream
+      event.track.onended = () => {
+        console.log('Remote track ended for', clientId);
         setRemoteStreams((prev) => {
           const newMap = new Map(prev);
-          newMap.set(clientId, event.streams[0]);
+          const stream = newMap.get(clientId);
+          if (stream) {
+            // Remove ended track and create new stream
+            const activeTracks = stream.getTracks().filter(t => t.readyState !== 'ended');
+            if (activeTracks.length > 0) {
+              newMap.set(clientId, new MediaStream(activeTracks));
+            } else {
+              newMap.delete(clientId);
+            }
+          }
           return newMap;
         });
-      }
+      };
     };
 
     // Handle ICE candidates
@@ -70,40 +130,117 @@ export const useWebRTC = (options?: UseWebRTCOptions) => {
 
     // Handle connection state changes
     pc.onconnectionstatechange = () => {
-      console.log(`Connection state with ${clientId}:`, pc.connectionState);
-      if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+      const state = pc.connectionState;
+      console.log(`Connection state with ${clientId}:`, state);
+      
+      if (state === 'disconnected' || state === 'failed') {
+        console.warn(`Connection ${state} with ${clientId}, cleaning up`);
         setRemoteStreams((prev) => {
           const newMap = new Map(prev);
           newMap.delete(clientId);
           return newMap;
         });
         peerConnectionsRef.current.delete(clientId);
+      } else if (state === 'connected') {
+        console.log(`Successfully connected to ${clientId}`);
+      }
+    };
+    
+    // Handle ICE connection state changes for better debugging
+    pc.oniceconnectionstatechange = () => {
+      const iceState = pc.iceConnectionState;
+      console.log(`ICE connection state with ${clientId}:`, iceState);
+      
+      if (iceState === 'failed') {
+        console.error(`ICE connection failed with ${clientId}, may need to restart`);
       }
     };
 
     peerConnectionsRef.current.set(clientId, pc);
     return pc;
-  }, []);
+  }, [isScreenSharing, options]);
 
   const createOffer = useCallback(async (clientId: string): Promise<RTCSessionDescriptionInit | null> => {
+    // Check if local stream is ready before creating offer
+    const streamToUse = screenStreamRef.current && isScreenSharing 
+      ? screenStreamRef.current 
+      : localStreamRef.current;
+    
+    if (!streamToUse) {
+      console.warn('Cannot create offer: local stream not ready for', clientId);
+      return null;
+    }
+    
     const pc = createPeerConnection(clientId);
+    
+    // Double-check that tracks were added
+    if (pc.getSenders().length === 0) {
+      console.warn('Peer connection created without tracks, retrying...');
+      // Try to add tracks again
+      streamToUse.getTracks().forEach((track) => {
+        pc.addTrack(track, streamToUse);
+      });
+      
+      // If we're using screen stream, also add audio from original stream
+      if (screenStreamRef.current && isScreenSharing && localStreamRef.current) {
+        const audioTrack = localStreamRef.current.getAudioTracks()[0];
+        if (audioTrack) {
+          pc.addTrack(audioTrack, localStreamRef.current);
+        }
+      }
+    }
     
     try {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
+      console.log('Created offer successfully for', clientId, 'with', pc.getSenders().length, 'senders');
       return offer;
     } catch (error) {
       console.error('Error creating offer:', error);
+      // Clean up failed connection
+      peerConnectionsRef.current.delete(clientId);
+      pc.close();
       return null;
     }
-  }, [createPeerConnection]);
+  }, [createPeerConnection, isScreenSharing]);
 
   const handleOffer = useCallback(async (clientId: string, offer: RTCSessionDescriptionInit): Promise<RTCSessionDescriptionInit | null> => {
+    // Check if local stream is ready before handling offer
+    const streamToUse = screenStreamRef.current && isScreenSharing 
+      ? screenStreamRef.current 
+      : localStreamRef.current;
+    
+    if (!streamToUse) {
+      console.warn('Cannot handle offer: local stream not ready for', clientId);
+      return null;
+    }
+    
     // Check if we already have a peer connection for this client
     let pc = peerConnectionsRef.current.get(clientId);
     if (!pc) {
       console.log('Creating new peer connection for offer from:', clientId);
       pc = createPeerConnection(clientId);
+      
+      if (!pc) {
+        console.error('Failed to create peer connection for:', clientId);
+        return null;
+      }
+      
+      // Ensure tracks are added
+      if (pc.getSenders().length === 0) {
+        console.warn('Peer connection created without tracks, adding tracks...');
+        streamToUse.getTracks().forEach((track) => {
+          pc!.addTrack(track, streamToUse);
+        });
+        
+        // If we're using screen stream, also add audio from original stream
+        if (screenStreamRef.current && isScreenSharing && localStreamRef.current) {
+          const audioTrack = localStreamRef.current.getAudioTracks()[0];
+          if (audioTrack) {
+            pc!.addTrack(audioTrack, localStreamRef.current);
+          }
+        }
+      }
     } else {
       console.log('Reusing existing peer connection for offer from:', clientId);
       // If remote description is already set, we might be handling a duplicate offer
@@ -124,13 +261,16 @@ export const useWebRTC = (options?: UseWebRTCOptions) => {
       console.log('Set remote description for:', clientId, 'signaling state:', pc.signalingState);
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
-      console.log('Created and set local answer for:', clientId);
+      console.log('Created and set local answer for:', clientId, 'with', pc.getSenders().length, 'senders');
       return answer;
     } catch (error) {
       console.error('Error handling offer:', error, 'signaling state:', pc?.signalingState);
+      // Clean up failed connection
+      peerConnectionsRef.current.delete(clientId);
+      pc.close();
       return null;
     }
-  }, [createPeerConnection]);
+  }, [createPeerConnection, isScreenSharing]);
 
   const handleAnswer = useCallback(async (clientId: string, answer: RTCSessionDescriptionInit): Promise<void> => {
     const pc = peerConnectionsRef.current.get(clientId);
@@ -213,9 +353,153 @@ export const useWebRTC = (options?: UseWebRTCOptions) => {
     return peerConnectionsRef.current.has(clientId);
   }, []);
 
+  const startScreenShare = useCallback(async (): Promise<boolean> => {
+    try {
+      // Get screen stream
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        },
+        audio: true, // Try to capture system audio if available
+      });
+
+      screenStreamRef.current = screenStream;
+
+      // Get the video track from screen stream
+      const screenVideoTrack = screenStream.getVideoTracks()[0];
+      if (!screenVideoTrack) {
+        throw new Error('No video track in screen stream');
+      }
+
+      // Store original camera stream if not already stored
+      if (!localStreamRef.current) {
+        throw new Error('No local stream available');
+      }
+
+      // Store the original camera video track before replacing
+      const originalVideoTrack = localStreamRef.current.getVideoTracks()[0];
+      if (originalVideoTrack && originalVideoTrack.label !== 'screen') {
+        originalVideoTrackRef.current = originalVideoTrack;
+      }
+
+      // Replace video tracks in all peer connections
+      const replacePromises: Promise<void>[] = [];
+      peerConnectionsRef.current.forEach((pc, clientId) => {
+        const senders = pc.getSenders();
+        const videoSender = senders.find((sender) => 
+          sender.track && sender.track.kind === 'video'
+        );
+
+        if (videoSender && screenVideoTrack) {
+          console.log(`Replacing video track for ${clientId} with screen track`);
+          const replacePromise = videoSender.replaceTrack(screenVideoTrack).then(() => {
+            console.log(`Successfully replaced track for ${clientId}`);
+            // Ensure the track is enabled
+            if (screenVideoTrack) {
+              screenVideoTrack.enabled = true;
+            }
+          }).catch((error) => {
+            console.error(`Error replacing track for ${clientId}:`, error);
+          });
+          replacePromises.push(replacePromise);
+        } else {
+          console.warn(`No video sender found for ${clientId} or no screen track`);
+        }
+      });
+
+      // Wait for all track replacements to complete
+      await Promise.all(replacePromises);
+
+      // Update local stream to show screen share
+      // Create a new stream with screen video and original audio
+      const originalAudioTrack = localStreamRef.current.getAudioTracks()[0];
+      const newStream = new MediaStream();
+      if (screenVideoTrack) {
+        newStream.addTrack(screenVideoTrack);
+      }
+      if (originalAudioTrack) {
+        newStream.addTrack(originalAudioTrack);
+      }
+
+      setLocalStream(newStream);
+      setIsScreenSharing(true);
+
+      // Handle when user stops sharing via browser UI
+      // We'll handle this in the component to avoid circular dependency
+
+      console.log('Screen sharing started');
+      return true;
+    } catch (error) {
+      console.error('Error starting screen share:', error);
+      return false;
+    }
+  }, []);
+
+  const stopScreenShare = useCallback(async (): Promise<void> => {
+    try {
+      // Stop screen stream
+      if (screenStreamRef.current) {
+        screenStreamRef.current.getTracks().forEach((track) => track.stop());
+        screenStreamRef.current = null;
+      }
+
+      // Restore original camera stream if available
+      if (localStreamRef.current) {
+        // Use stored original video track, or get a new one
+        let videoTrack = originalVideoTrackRef.current;
+        
+        if (!videoTrack || videoTrack.readyState !== 'live') {
+          // Re-get camera stream if original track is not available
+          const cameraStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
+            audio: false, // Keep existing audio
+          });
+          videoTrack = cameraStream.getVideoTracks()[0];
+        }
+        
+        originalVideoTrackRef.current = null;
+
+        // Replace video tracks in all peer connections back to camera
+        if (videoTrack) {
+          peerConnectionsRef.current.forEach((pc, clientId) => {
+            const senders = pc.getSenders();
+            const videoSender = senders.find((sender) => 
+              sender.track && sender.track.kind === 'video'
+            );
+
+            if (videoSender) {
+              videoSender.replaceTrack(videoTrack!).catch((error) => {
+                console.error(`Error replacing track back to camera for ${clientId}:`, error);
+              });
+            }
+          });
+
+          // Update local stream to show camera
+          const audioTrack = localStreamRef.current.getAudioTracks()[0];
+          const newStream = new MediaStream();
+          newStream.addTrack(videoTrack);
+          if (audioTrack) {
+            newStream.addTrack(audioTrack);
+          }
+          setLocalStream(newStream);
+        }
+      }
+
+      setIsScreenSharing(false);
+      console.log('Screen sharing stopped');
+    } catch (error) {
+      console.error('Error stopping screen share:', error);
+    }
+  }, []);
+
   return {
     localStream,
     remoteStreams,
+    isScreenSharing,
     initializeLocalStream,
     createOffer,
     handleOffer,
@@ -224,6 +508,8 @@ export const useWebRTC = (options?: UseWebRTCOptions) => {
     removePeer,
     toggleAudio,
     toggleVideo,
+    startScreenShare,
+    stopScreenShare,
     stopLocalStream,
     cleanup,
     hasPeerConnection,

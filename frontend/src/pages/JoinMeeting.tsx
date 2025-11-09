@@ -21,7 +21,6 @@ export default function JoinMeeting() {
     if (meetingCode.length !== 10) return;
     
     try {
-      // Normalize to lowercase for backend
       const normalizedCode = meetingCode.toLowerCase();
       await meetingsApi.getByCode(normalizedCode);
       setError('');
@@ -45,7 +44,6 @@ export default function JoinMeeting() {
     setError('');
 
     try {
-      // Normalize to lowercase for backend
       const normalizedCode = meetingCode.toLowerCase();
       await meetingsApi.getByCode(normalizedCode);
       navigate(`/meeting/${normalizedCode}?name=${encodeURIComponent(displayName)}`);

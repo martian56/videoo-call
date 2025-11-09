@@ -1,4 +1,4 @@
-import { Mic, MicOff, Video, VideoOff, Monitor, PhoneOff, MessageSquare } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, Monitor, PhoneOff, MessageSquare, Users } from 'lucide-react';
 
 interface MeetingControlsProps {
   audioEnabled: boolean;
@@ -6,10 +6,13 @@ interface MeetingControlsProps {
   onToggleAudio: () => void;
   onToggleVideo: () => void;
   onScreenShare?: () => void;
+  isScreenSharing?: boolean;
   onLeave: () => void;
   onToggleChat: () => void;
   chatOpen: boolean;
   hasUnreadMessages?: boolean;
+  onToggleParticipants?: () => void;
+  participantsOpen?: boolean;
 }
 
 export default function MeetingControls({
@@ -18,10 +21,13 @@ export default function MeetingControls({
   onToggleAudio,
   onToggleVideo,
   onScreenShare,
+  isScreenSharing = false,
   onLeave,
   onToggleChat,
   chatOpen,
   hasUnreadMessages = false,
+  onToggleParticipants,
+  participantsOpen = false,
 }: MeetingControlsProps) {
   return (
     <div className="flex items-center justify-center gap-4 p-4 bg-gray-900/80 backdrop-blur-sm border-t border-gray-700">
@@ -63,10 +69,27 @@ export default function MeetingControls({
       {onScreenShare && (
         <button
           onClick={onScreenShare}
-          className="p-3 rounded-full bg-gray-700 hover:bg-gray-600 transition-all"
-          title="Share screen"
+          className={`p-3 rounded-full transition-all ${
+            isScreenSharing
+              ? 'bg-primary-600 hover:bg-primary-700'
+              : 'bg-gray-700 hover:bg-gray-600'
+          }`}
+          title={isScreenSharing ? 'Stop sharing screen' : 'Share screen'}
         >
           <Monitor className="w-6 h-6 text-white" />
+        </button>
+      )}
+
+      {/* Participants Toggle */}
+      {onToggleParticipants && (
+        <button
+          onClick={onToggleParticipants}
+          className={`p-3 rounded-full transition-all ${
+            participantsOpen ? 'bg-primary-600 hover:bg-primary-700' : 'bg-gray-700 hover:bg-gray-600'
+          }`}
+          title="Participants"
+        >
+          <Users className="w-6 h-6 text-white" />
         </button>
       )}
 

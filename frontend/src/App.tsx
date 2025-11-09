@@ -9,16 +9,16 @@ function App() {
     <ErrorBoundary>
       <Router>
         <Routes>
-          {/* Home page - Create or join meetings */}
+          {/* Home page */}
           <Route path="/" element={<Home />} />
           
-          {/* Join meeting page - Enter code and name */}
+          {/* Join meeting page */}
           <Route path="/join" element={<JoinMeeting />} />
           
-          {/* Meeting room - Active video call */}
+          {/* Meeting room */}
           <Route path="/meeting/:meetingCode" element={<MeetingRoom />} />
           
-          {/* Catch all - redirect to home */}
+          {/* Catch all */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>

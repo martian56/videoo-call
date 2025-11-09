@@ -249,9 +249,23 @@ async def websocket_endpoint(
             })
         
         # Notify others about new participant
+        # Include display name if available
+        display_name = None
+        async with AsyncSessionLocal() as db:
+            try:
+                result = await db.execute(
+                    select(Participant).where(Participant.client_id == client_id)
+                )
+                participant = result.scalar_one_or_none()
+                if participant:
+                    display_name = participant.display_name
+            except Exception as e:
+                logger.error(f"Error getting participant display name: {e}")
+        
         await broadcast_to_meeting(meeting_code, {
             "type": WSMessageType.USER_JOINED,
             "clientId": client_id,
+            "displayName": display_name,
             "timestamp": datetime.now(UTC).isoformat()
         }, exclude_client=client_id)
         
@@ -286,6 +300,7 @@ async def websocket_endpoint(
             elif message_type == WSMessageType.JOIN:
                 # Update participant display name if provided
                 if "displayName" in message:
+                    display_name = message["displayName"]
                     async with AsyncSessionLocal() as db:
                         try:
                             result = await db.execute(
@@ -293,11 +308,19 @@ async def websocket_endpoint(
                             )
                             participant = result.scalar_one_or_none()
                             if participant:
-                                participant.display_name = message["displayName"]
+                                participant.display_name = display_name
                                 await db.commit()
+                                logger.info(f"Updated display name for {client_id}: {display_name}")
                         except Exception as e:
                             logger.error(f"Error updating participant name: {e}")
                             await db.rollback()
+                    
+                    # Broadcast display name update to all other participants
+                    await broadcast_to_meeting(meeting_code, {
+                        "type": "participant-name-update",
+                        "clientId": client_id,
+                        "displayName": display_name
+                    }, exclude_client=client_id)
             
             elif message_type == WSMessageType.AUDIO_TOGGLE:
                 # Update participant in database

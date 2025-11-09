@@ -23,14 +23,12 @@ export const meetingsApi = {
   },
 
   getByCode: async (code: string): Promise<Meeting> => {
-    // Convert to lowercase to match backend storage
     const normalizedCode = code.toLowerCase();
     const response = await axios.get<Meeting>(`${API_BASE_URL}/api/meetings/${normalizedCode}`);
     return response.data;
   },
 
   getParticipants: async (code: string) => {
-    // Convert to lowercase to match backend storage
     const normalizedCode = code.toLowerCase();
     const response = await axios.get(`${API_BASE_URL}/api/meetings/${normalizedCode}/participants`);
     return response.data;

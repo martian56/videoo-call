@@ -26,7 +26,6 @@ export default function Home() {
 
   const handleJoinMeeting = () => {
     if (meetingCode.trim().length === 10) {
-      // Normalize to lowercase for consistency
       const normalizedCode = meetingCode.toLowerCase();
       navigate(`/join?code=${normalizedCode}`);
     } else {
@@ -69,7 +68,7 @@ export default function Home() {
             <button
               onClick={handleCreateMeeting}
               disabled={isCreating}
-              className="w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-primary-500/50 hover:shadow-xl hover:shadow-primary-500/60 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
             >
               {isCreating ? (
                 <>
