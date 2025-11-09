@@ -1,5 +1,5 @@
 import { useRef, useCallback, useState } from 'react';
-import { RTC_CONFIG } from '../config';
+import { fetchIceServers } from '../config';
 
 export interface PeerConnection {
   peerConnection: RTCPeerConnection;
@@ -19,6 +19,7 @@ export const useWebRTC = (options?: UseWebRTCOptions) => {
   const screenStreamRef = useRef<MediaStream | null>(null);
   const originalVideoTrackRef = useRef<MediaStreamTrack | null>(null);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const iceServersRef = useRef<RTCIceServer[] | null>(null);
 
   const initializeLocalStream = useCallback(async (): Promise<boolean> => {
     try {
@@ -39,8 +40,15 @@ export const useWebRTC = (options?: UseWebRTCOptions) => {
     }
   }, []);
 
-  const createPeerConnection = useCallback((clientId: string): RTCPeerConnection => {
-    const pc = new RTCPeerConnection(RTC_CONFIG);
+  const createPeerConnection = useCallback(async (clientId: string): Promise<RTCPeerConnection> => {
+    // Fetch ICE servers if not already cached
+    if (!iceServersRef.current) {
+      console.log('Fetching TURN server credentials...');
+      iceServersRef.current = await fetchIceServers();
+      console.log('ICE servers fetched:', iceServersRef.current);
+    }
+    
+    const pc = new RTCPeerConnection({ iceServers: iceServersRef.current });
     
     // Add local stream tracks
     // If we're screen sharing, use the screen track, otherwise use camera
@@ -171,7 +179,7 @@ export const useWebRTC = (options?: UseWebRTCOptions) => {
       return null;
     }
     
-    const pc = createPeerConnection(clientId);
+    const pc = await createPeerConnection(clientId);
     
     // Double-check that tracks were added
     if (pc.getSenders().length === 0) {
@@ -219,7 +227,7 @@ export const useWebRTC = (options?: UseWebRTCOptions) => {
     let pc = peerConnectionsRef.current.get(clientId);
     if (!pc) {
       console.log('Creating new peer connection for offer from:', clientId);
-      pc = createPeerConnection(clientId);
+      pc = await createPeerConnection(clientId);
       
       if (!pc) {
         console.error('Failed to create peer connection for:', clientId);

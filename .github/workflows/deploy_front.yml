@@ -10,6 +10,7 @@ jobs:
     env:
       VITE_API_URL: https://videoo-call.onrender.com
       VITE_WS_URL: wss://videoo-call.onrender.com
+      VITE_METERED_API_KEY:  ${{ secrets.VITE_METERED_API_KEY }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
